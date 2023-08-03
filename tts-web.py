@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydub import AudioSegment
 from pywebio import config
 from pywebio.platform.tornado_http import start_server
-from pywebio.input import input, textarea, input_group
+from pywebio.input import input, textarea, input_group, radio
 from pywebio.output import put_text, put_file, put_processbar, set_processbar, put_markdown, put_collapse, put_success
 
 headers = {
@@ -92,11 +92,15 @@ def main():
 
     put_markdown('# 沙洲之歌')
     put_markdown('> 沙洲书社的论文音频合成工具')
+    voice_options = [('云泽', 'zh-CN-YunzeNeural'), ('晓秋', 'zh-CN-XiaoqiuNeural')]
     data = input_group("请输入论文信息", [
         input("论文的标题：", name='title'),
         input("作者的名称：", name='author'),
         input("作者的简介：", name='author_intro'),
         input("论文的来源：", name='source'),
+        #radio("开头的语音：", options=voice_options, name='head-voice', inline=True, value='zh-CN-XiaoqiuNeural'),
+        #radio("正文的语音：", options=voice_options, name='body-voice', inline=True, value='zh-CN-YunzeNeural'),
+        #radio("结尾的语音：", options=voice_options, name='foot-voice', inline=True, value='zh-CN-XiaoqiuNeural'),
         textarea("论文的内容：", name='article', rows=10, placeholder="请将论文内容粘贴到这里，不用整理格式，会自动格式化"),
     ])
 
@@ -104,8 +108,15 @@ def main():
     author = data['author']
     author_intro = data['author_intro']
     source = data['source']
+    #head_voice = data['head-voice']
+    #body_voice = data['body-voice']
+    #foot_voice = data['foot-voice']
     article = data['article']
     article = article.strip()
+
+    head_voice = 'zh-CN-XiaoqiuNeural'
+    body_voice = 'zh-CN-YunzeNeural'
+    foot_voice = 'zh-CN-XiaoqiuNeural'
 
     ## 再次让用户编辑
     # article = textarea(value=article, rows=20)
@@ -120,10 +131,10 @@ def main():
     put_processbar(process_id)  # 初始化进度条
 
     # article_audio = generate_article_audio(article_contents, process_id)
-    combined_text, article_audio = process_contents_parallel(article_contents, 'zh-CN-YunzeNeural', process_id)
+    combined_text, article_audio = process_contents_parallel(article_contents, body_voice, process_id)
     put_text("正在生成音频文件...")
-    intro_audio = generate_audio(intro_text, 'zh-CN-XiaoqiuNeural')
-    outro_audio = generate_audio(outro_text, 'zh-CN-XiaoqiuNeural')
+    intro_audio = generate_audio(intro_text, head_voice)
+    outro_audio = generate_audio(outro_text, foot_voice)
 
     combined_audio = intro_audio + article_audio + outro_audio
 
