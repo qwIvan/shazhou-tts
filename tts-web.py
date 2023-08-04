@@ -147,7 +147,7 @@ def main():
 
     put_success("音频文件已生成")
     put_file(f'{title}_{author}.mp3', content)  # 提供下载链接
-    put_collapse('论文内容', combined_text)
+    put_collapse('整理好的论文', combined_text)
 
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
