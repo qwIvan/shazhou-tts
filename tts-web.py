@@ -2,6 +2,7 @@ import os
 import requests
 import tempfile
 import xmltodict
+import openai
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydub import AudioSegment
 from pywebio import config
@@ -94,14 +95,14 @@ def main():
     put_markdown('> 沙洲书社的论文音频合成工具')
     voice_options = [('云泽', 'zh-CN-YunzeNeural'), ('晓秋', 'zh-CN-XiaoqiuNeural')]
     data = input_group("请输入论文信息", [
-        input("论文的标题：", name='title'),
-        input("作者的名称：", name='author'),
-        input("作者的简介：", name='author_intro'),
-        input("论文的来源：", name='source'),
+        input("论文的标题：", name='title', required=True),
+        input("作者的名称：", name='author', required=True),
+        input("作者的简介：", name='author_intro', required=True),
+        input("论文的来源：", name='source', required=True),
         #radio("开头的语音：", options=voice_options, name='head-voice', inline=True, value='zh-CN-XiaoqiuNeural'),
         #radio("正文的语音：", options=voice_options, name='body-voice', inline=True, value='zh-CN-YunzeNeural'),
         #radio("结尾的语音：", options=voice_options, name='foot-voice', inline=True, value='zh-CN-XiaoqiuNeural'),
-        textarea("论文的内容：", name='article', rows=10, placeholder="请将论文内容粘贴到这里，不用整理格式，会自动格式化"),
+        textarea("论文的内容：", name='article', rows=10, placeholder="请将论文内容粘贴到这里，不用整理格式，会自动格式化", required=True),
     ])
 
     title = data['title']
@@ -149,12 +150,8 @@ def main():
     put_collapse('论文内容', combined_text)
 
 
+openai.api_key = os.getenv("OPENAI_API_KEY")
 def format(raw_text):
-    import os
-    import openai
-
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k",
         messages=[
@@ -216,4 +213,4 @@ def process_contents_parallel(contents, voice_name, process_id):
 
 
 if __name__ == "__main__":
-    start_server(main, debug=True)
+    start_server(main)
