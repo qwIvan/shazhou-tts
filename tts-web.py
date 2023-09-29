@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydub import AudioSegment
 from pywebio import config
 from pywebio.platform.tornado_http import start_server
-from pywebio.input import input, textarea, input_group, radio
+from pywebio.input import input, textarea, input_group, radio, actions
 from pywebio.output import put_text, put_file, put_processbar, set_processbar, put_markdown, put_collapse, put_success
 
 headers = {
@@ -19,7 +19,7 @@ headers = {
 config(title='沙洲之歌 - 沙洲书社的论文音频合成工具')
 
 
-def split_text(content, size=2000):
+def split_text(content, size=1500):
     chunks = []
     start = 0
     while start < len(content):
@@ -102,13 +102,16 @@ def main():
         #radio("开头的语音：", options=voice_options, name='head-voice', inline=True, value='zh-CN-XiaoqiuNeural'),
         #radio("正文的语音：", options=voice_options, name='body-voice', inline=True, value='zh-CN-YunzeNeural'),
         #radio("结尾的语音：", options=voice_options, name='foot-voice', inline=True, value='zh-CN-XiaoqiuNeural'),
-        textarea("论文的内容：", name='article', rows=10, placeholder="请将论文内容粘贴到这里，不用整理格式，会自动格式化", required=True),
+        textarea("论文的内容：", name='article', rows=10, placeholder="请将论文内容粘贴到这里", required=True),
+        textarea("论文的结尾：", name='outro_text', rows=3, value='以上内容，由沙洲书社淡定洲同志制作，仅供学术研究使用。'),
+        radio("格式化：", options=[('自动格式化', True), ('不格式化', False)], inline=True, name='formatting', value=True),
     ])
 
     title = data['title']
     author = data['author']
     author_intro = data['author_intro']
     source = data['source']
+    formatting = data['formatting']
     #head_voice = data['head-voice']
     #body_voice = data['body-voice']
     #foot_voice = data['foot-voice']
@@ -123,7 +126,7 @@ def main():
     # article = textarea(value=article, rows=20)
 
     intro_text = f"标题：{title}\n作者：{author}，{author_intro}\n来源：{source}"
-    outro_text = "以上内容，由沙洲书社淡定洲同志制作，仅供学术研究使用。"
+    outro_text = data['outro_text'].strip()
 
     article_contents = split_text(article)
 
@@ -132,12 +135,24 @@ def main():
     put_processbar(process_id)  # 初始化进度条
 
     # article_audio = generate_article_audio(article_contents, process_id)
-    combined_text, article_audio = process_contents_parallel(article_contents, body_voice, process_id)
+    while True:
+        try:
+            combined_text, article_audio = process_contents_parallel(article_contents, body_voice, process_id, formatting)
+        except:
+            import traceback
+            traceback.print_exc()
+            # 询问用户是否想要重试
+            retry = actions(label="发生错误，是否重试？", buttons=[{'label': '重试', 'value': 'retry'}, {'label': '取消', 'value': 'cancel'}])
+            if retry == 'cancel':
+                return
+        else:
+            break
     put_text("正在生成音频文件...")
     intro_audio = generate_audio(intro_text, head_voice)
-    outro_audio = generate_audio(outro_text, foot_voice)
 
-    combined_audio = intro_audio + article_audio + outro_audio
+    combined_audio = intro_audio + article_audio
+    if outro_text:
+        combined_audio += generate_audio(outro_text, foot_voice)
 
     temp_combined_audio_path = tempfile.mktemp(suffix=".mp3")
     combined_audio.export(temp_combined_audio_path, format='mp3')
@@ -147,7 +162,8 @@ def main():
 
     put_success("音频文件已生成")
     put_file(f'{title}_{author}.mp3', content)  # 提供下载链接
-    put_collapse('整理好的论文', combined_text)
+    if formatting:
+        put_collapse('整理好的论文', combined_text)
 
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -184,15 +200,15 @@ pool_size = 10  # 线程池的大小，你可以根据你的机器情况调整�
 pool = ThreadPoolExecutor(pool_size)  # 创建线程池
 
 
-def process_content(raw_text, voice_name):
-    formatted_text = format(raw_text)
+def process_content(raw_text, voice_name, formatting=True):
+    formatted_text = format(raw_text) if formatting else raw_text
     audio_segment = generate_audio(formatted_text, voice_name)
 
     return formatted_text, audio_segment
 
 
-def process_contents_parallel(contents, voice_name, process_id):
-    futures = [pool.submit(process_content, content, voice_name) for content in contents]
+def process_contents_parallel(contents, voice_name, process_id, formatting=True):
+    futures = [pool.submit(process_content, content, voice_name, formatting) for content in contents]
     audio_results = [None] * len(contents)  # 创建一个空列表来存储音频结果
     text_results = [''] * len(contents)  # 创建一个空列表来存储文本结果
 
