@@ -166,7 +166,6 @@ def main():
         put_collapse('整理好的论文', combined_text)
 
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
 def format(raw_text):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k",
