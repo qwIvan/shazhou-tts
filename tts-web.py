@@ -10,6 +10,7 @@ from pywebio import config
 from pywebio.platform.tornado_http import start_server
 from pywebio.input import input, textarea, input_group, radio, actions
 from pywebio.output import put_text, put_file, put_processbar, set_processbar, put_markdown, put_collapse, put_success
+openai.base_url = os.environ.get("OPENAI_API_BASE")
 
 headers = {
     'content-type': 'application/ssml+xml; charset=utf-8',
@@ -169,7 +170,7 @@ def main():
 
 def format(raw_text):
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {
@@ -197,7 +198,7 @@ def format(raw_text):
     except:
         traceback.print_exc()
         return raw_text
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 
 pool_size = 10  # 线程池的大小，你可以根据你的机器情况调整这个值
