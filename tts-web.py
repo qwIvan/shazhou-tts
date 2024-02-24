@@ -3,6 +3,7 @@ import requests
 import tempfile
 import xmltodict
 import openai
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydub import AudioSegment
 from pywebio import config
@@ -167,31 +168,35 @@ def main():
 
 
 def format(raw_text):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-16k",
-        messages=[
-            {
-                "role": "system",
-                "content": "我给你一段文字，你帮我去掉文中的脚注编号，其他的保留原文不变，不改变原文的文字"
-            },
-            {
-                "role": "user",
-                "content": "权力总是存在\n于权力主体和权力客体的相互作用之中。“理解 ‘权力’概念的最好的方法是将其视为冲突的意志\n之间的关系”。⑤\n"
-            },
-            {
-                "role": "assistant",
-                "content": "权力总是存在于权力主体和权力客体的相互作用之中。“理解 ‘权力’概念的最好的方法是将其视为冲突的意志之间的关系”。"
-            },
-            {
-                "role": "user",
-                "content": raw_text,
-            }
-        ],
-        temperature=0,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "我给你一段文字，你帮我去掉文中的脚注编号，其他的保留原文不变，不改变原文的文字。"
+                },
+                {
+                    "role": "user",
+                    "content": "权力总是存在\n于权力主体和权力客体的相互作用之中。“理解 ‘权力’概念的最好的方法是将其视为冲突的意志\n之间的关系”。⑤\n"
+                },
+                {
+                    "role": "assistant",
+                    "content": "权力总是存在于权力主体和权力客体的相互作用之中。“理解 ‘权力’概念的最好的方法是将其视为冲突的意志之间的关系”。"
+                },
+                {
+                    "role": "user",
+                    "content": raw_text,
+                }
+            ],
+            temperature=0,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+    except:
+        traceback.print_exc()
+        return raw_text
     return response['choices'][0]['message']['content']
 
 
