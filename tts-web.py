@@ -11,6 +11,7 @@ from pywebio.platform.tornado_http import start_server
 from pywebio.input import input, textarea, input_group, radio, actions
 from pywebio.output import put_text, put_file, put_processbar, set_processbar, put_markdown, put_collapse, put_success
 openai.base_url = os.environ.get("OPENAI_API_BASE")
+gpt_model = os.environ.get("GPT_MODEL", "gpt-3.5-turbo-0125")
 
 headers = {
     'content-type': 'application/ssml+xml; charset=utf-8',
@@ -171,7 +172,7 @@ def main():
 def format(raw_text):
     try:
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=gpt_model,
             messages=[
                 {
                     "role": "system",
